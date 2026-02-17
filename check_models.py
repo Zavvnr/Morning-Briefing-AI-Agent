@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 print("--- Starting Model Check ---")
 
 try:
-    # Load environment variables from .env file
     load_dotenv()
     GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
     genai.configure(api_key=GOOGLE_API_KEY)
@@ -14,7 +13,6 @@ try:
     print(f"--- Using google-generativeai version: {genai.__version__} ---")
     print("--- Attempting to list models... ---")
 
-    # This loop will print every model your key can access
     found_models = False
     for m in genai.list_models():
         if 'generateContent' in m.supported_generation_methods:
