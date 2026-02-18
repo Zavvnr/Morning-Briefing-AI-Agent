@@ -1,15 +1,18 @@
+import asyncio
 import os
 import smtplib
 import requests
-import google.generativeai as genai
-import pytz
 import sys
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from deepseek import DeepSeek
+from openai import OpenAI
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
-print(f"--- Using google-generativeai version: {genai.__version__} ---")
+print(f"--- Using deepseek-generativeai version: models/DeepSeek-R1 / V3 ---")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,9 +25,6 @@ GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 LOCATION = "Madison, Wisconsin"
 TIMEZONE = "America/Chicago"
-
-# Configure the Deepseek API
-genai.configure(api_key=DEEPSEEK_API_KEY)
 
 # System Instruction for the AI model
 SYSTEM_INSTRUCTION = """
@@ -42,9 +42,9 @@ Based on the user's provided information (quote, weather, and callendar), genera
 
 MODEL_NAME = "models/DeepSeek-R1 / V3" 
 
-model = genai.GenerativeModel(
-    MODEL_NAME,
-    system_instruction=SYSTEM_INSTRUCTION
+model = OpenAI(
+    api_key=DEEPSEEK_API_KEY, 
+    base_url="https://api.deepseek.com"
 )
 
 def get_quote():
@@ -73,14 +73,14 @@ def get_weather(city):
         print(f"DEBUG: Error fetching weather: {e}", file=sys.stderr)
         return "Could not fetch the weather."
 
-def generate_ai_briefing(quote, weather):
+def generate_ai_briefing(quote, weather, calendar_items=[]):
     print("DEBUG: Inside generate_ai_briefing function.")
     prompt = f"""
     Here is today's information for my briefing:
     - Today's date is {datetime.now().strftime('%A, %B %d, %Y')}.
     - Inspirational Quote: {quote}
     - Weather Forecast: {weather}
-    - Upcoming from Calendar: 
+    - Upcoming from Calendar: {', '.join(calendar_items) if calendar_items else 'None'}
     """
     
     try:
