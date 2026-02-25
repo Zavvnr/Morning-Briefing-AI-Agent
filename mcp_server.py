@@ -79,8 +79,6 @@ load_dotenv()
 # Configuration
 CHATGPT_API_KEY = os.getenv('CHATGPT_API_KEY')
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
-GMAIL_SENDER = os.getenv('GMAIL_SENDER')
-GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 LOCATION = "Madison, Wisconsin"
 TIMEZONE = "America/Chicago"
