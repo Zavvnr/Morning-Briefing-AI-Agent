@@ -12,6 +12,46 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.server.fastmcp import FastMCP
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+# Setting up Google Calendar API and Google Gmail API credentials
+SERVICE_ACCOUNT_FILE = 'credentials.json'
+# Define the scopes for Google Calendar API and Gmail API
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.send']
+
+@mcp.tool()
+def get_calendar_events():
+    """
+    Fetches upcoming events from the user's Google Calendar.
+    Use this when the user asks about their schedule or due dates.
+    """
+    # Authenticate
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    service = build('calendar', 'v3', credentials=creds)
+
+    # Call the API
+    events_result = service.events().list(
+        calendarId=YOUR_EMAIL, 
+        maxResults=limit, 
+        singleEvents=True,
+        orderBy='startTime'
+    ).execute()
+    
+    events = events_result.get('items', [])
+
+    # Format the output for the LLM
+    if not events:
+        return "No upcoming events found."
+
+    output = "Upcoming Events:\n"
+    for event in events:
+        start = event['start'].get('dateTime', event['start'].get('date'))
+        output += f"- {start}: {event['summary']}\n"
+    
+    return output
+
 # Create an MCP server
 mcp = FastMCP(
     name="Morning Briefing AI Agent",
@@ -37,7 +77,7 @@ print(f"--- Using deepseek-generativeai version: models/DeepSeek-R1 / V3 ---")
 load_dotenv()
 
 # Configuration
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
+CHATGPT_API_KEY = os.getenv('CHATGPT_API_KEY')
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 GMAIL_SENDER = os.getenv('GMAIL_SENDER')
 GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
@@ -45,11 +85,11 @@ RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 LOCATION = "Madison, Wisconsin"
 TIMEZONE = "America/Chicago"
 
-MODEL_NAME = "models/DeepSeek-R1 / V3" 
+MODEL_NAME = "gpt-5-nano"
 
 model = OpenAI(
-    api_key=DEEPSEEK_API_KEY, 
-    base_url="https://api.deepseek.com"
+    api_key=CHATGPT_API_KEY, 
+    base_url="https://api.openai.com"
 )
 
 @mcp.tool()
@@ -149,6 +189,10 @@ def gather_all_data():
     # Think with AI
     print("DEBUG: Calling generate_ai_briefing...")
     ai_content = generate_ai_briefing(daily_quote, weather_forecast)
+
+    # Google Calendar events
+    calendar_events = get_calendar_events()
+    print(f"DEBUG: Calendar events retrieved: {calendar_events[:50]}...")
 
     # Send the email
     print("DEBUG: Calling send_email...")
