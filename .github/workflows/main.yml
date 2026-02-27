@@ -27,9 +27,9 @@ jobs:
           pip install --no-cache-dir --upgrade google-generativeai requests python-dotenv pytz
           pip install -r requirements.txt
 
-      - name: Run the AI agent script
+      - name: Run MCP server directly
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: python -u agent.py
+        run: python -u mcp_server.py
