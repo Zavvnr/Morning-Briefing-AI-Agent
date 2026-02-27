@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 
 from agents import Agent, Runner
 from agents.mcp.server import MCPServerStdio
@@ -11,9 +12,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 async def main():
     server_params = {
-        "command": r"C:\Users\zavie\AppData\Local\Programs\Python\Python312\python.exe",
-        "args": [r"C:\Users\zavie\OneDrive\Desktop\Morning-Briefing-AI-Agent\mcp_server.py"],
-        "env": None
+        "command": sys.executable,
+        "args": ["mcp_server.py"],
+        "env": None,
     }
                 
     async with MCPServerStdio(params=server_params) as mcp_server:
