@@ -6,7 +6,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from deepseek import DeepSeek
 from openai import OpenAI
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -19,6 +18,24 @@ from googleapiclient.discovery import build
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 # Define the scopes for Google Calendar API and Gmail API
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.send']
+
+# Initialize services
+# Define MCP tools
+# System Instruction for the AI model
+SYSTEM_PROMPT = ""
+
+def get_system_prompt() -> str:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROMPT_PATH = os.path.join(BASE_DIR, "system_prompt.txt")
+    with open(PROMPT_PATH, "r", encoding="utf-8") as f:
+        SYSTEM_PROMPT = f.read()
+    return SYSTEM_PROMPT
+
+# Create an MCP server
+mcp = FastMCP(
+    name="Morning Briefing AI Agent",
+    instructions=get_system_prompt(),
+)
 
 @mcp.tool()
 def get_calendar_events():
@@ -33,8 +50,8 @@ def get_calendar_events():
 
     # Call the API
     events_result = service.events().list(
-        calendarId=YOUR_EMAIL, 
-        maxResults=limit, 
+        calendarId='primary', 
+        maxResults=10, 
         singleEvents=True,
         orderBy='startTime'
     ).execute()
@@ -52,32 +69,13 @@ def get_calendar_events():
     
     return output
 
-# Create an MCP server
-mcp = FastMCP(
-    name="Morning Briefing AI Agent",
-    description=get_system_prompt(),
-)
-
-# Initialize services
-
-# Define MCP tools
-
-# System Instruction for the AI model
-SYSTEM_PROMPT = ""
-
-@mcp.tool(name="generate_briefing", description="Generate the morning briefing email content based on the quote and weather.")
-def get_system_prompt() -> str:
-    with open("system_prompt.txt", "r", encoding="utf-8") as f:
-        SYSTEM_PROMPT = f.read()
-    return SYSTEM_PROMPT
-
-print(f"--- Using deepseek-generativeai version: models/DeepSeek-R1 / V3 ---")
+print(f"--- Using OpenAI model: gpt-5-nano ---")
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configuration
-CHATGPT_API_KEY = os.getenv('CHATGPT_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 LOCATION = "Madison, Wisconsin"
@@ -86,7 +84,7 @@ TIMEZONE = "America/Chicago"
 MODEL_NAME = "gpt-5-nano"
 
 model = OpenAI(
-    api_key=CHATGPT_API_KEY, 
+    api_key=OPENAI_API_KEY, 
     base_url="https://api.openai.com"
 )
 
@@ -156,7 +154,7 @@ def send_email(html_content):
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = f"Your Morning Briefing - {datetime.now().strftime('%B %d')}"
-    msg['From'] = GMAIL_SENDER
+    msg['From'] = SCOPES[1] # The email associated with the service account
     msg['To'] = RECIPIENT_EMAIL
     msg.attach(MIMEText(html_content, 'html'))
 
@@ -164,9 +162,9 @@ def send_email(html_content):
         print("DEBUG: Attempting SMTP connection...")
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             print("DEBUG: Attempting SMTP login...")
-            smtp_server.login(GMAIL_SENDER, GMAIL_APP_PASSWORD)
+            smtp_server.login(SCOPES[1], None) # No password needed with service account
             print("DEBUG: Attempting to send mail...")
-            smtp_server.sendmail(GMAIL_SENDER, RECIPIENT_EMAIL, msg.as_string())
+            smtp_server.sendmail(SCOPES[1], RECIPIENT_EMAIL, msg.as_string())
         print("Email sent successfully!") # This is the original, good print
 
     except Exception as e:
