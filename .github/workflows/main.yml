@@ -25,6 +25,7 @@ jobs:
           pip cache purge
           # ADD --no-cache-dir to force a fresh download
           pip install --no-cache-dir --upgrade google-generativeai requests python-dotenv pytz
+          pip install -r requirements.txt
 
       - name: Run the AI agent script
         env:
