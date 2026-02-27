@@ -73,7 +73,6 @@ pyparsing==3.3.2
 pyperclip==1.11.0
 python-dotenv==1.2.1
 python-multipart==0.0.22
-pywin32==311
 pywin32-ctypes==0.2.3
 PyYAML==6.0.3
 referencing==0.37.0
