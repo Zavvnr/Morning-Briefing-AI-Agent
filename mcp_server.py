@@ -81,7 +81,7 @@ RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 LOCATION = "Madison, Wisconsin"
 TIMEZONE = "America/Chicago"
 
-MODEL_NAME = "gpt-5-nano"
+MODEL_NAME = "gpt-4.1"
 
 model = OpenAI(
     api_key=OPENAI_API_KEY, 
@@ -128,7 +128,7 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
     """
     
     try:
-        print("DEBUG: Calling AI model (DeepSeek-R1 / V3)...")
+        print("DEBUG: Calling AI model (gpt-5-nano)...")
         response = model.generate_content(prompt)
         
         if not response.text:
@@ -173,7 +173,6 @@ def send_email(html_content):
 
 @mcp.tool()
 def gather_all_data():
-    
     # Get quote and weather in parallel to save time
     daily_quote = get_quote()
     # Slice to keep log clean
