@@ -94,12 +94,20 @@ def get_weather(city):
 @mcp.tool()
 def generate_ai_briefing(quote, weather, calendar_items=[]):
     prompt = f"""
-    Here is today's information for my briefing:
-    - Today's date is {datetime.now().strftime('%A, %B %d, %Y')}.
-    - Inspirational Quote: {quote}
-    - Weather Forecast: {weather}
-    - Upcoming from Calendar: {', '.join(calendar_items) if calendar_items else 'None'}
-    """
+        Create a concise, elegant morning briefing.
+
+        Return the response in this exact structure:
+
+        QUOTE:
+        WEATHER:
+        CALENDAR:
+        CLOSING:
+
+        Today's date: {datetime.now().strftime('%A, %B %d, %Y')}
+        Quote: {quote}
+        Weather: {weather}
+        Calendar: {', '.join(calendar_items) if calendar_items else 'None'}
+        """
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -118,6 +126,53 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
 
     except Exception as e:
         return f"<h3>Error during AI generation</h3><p>{e}</p>"
+
+def format_email_html(ai_text):
+    sections = {
+        "QUOTE": "",
+        "WEATHER": "",
+        "CALENDAR": "",
+        "CLOSING": ""
+    }
+
+    current_key = None
+    for line in ai_text.splitlines():
+        line = line.strip()
+        if line.replace(":", "") in sections:
+            current_key = line.replace(":", "")
+        elif current_key:
+            sections[current_key] += line + " "
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px;">
+        <div style="max-width:600px; margin:auto; background:white; padding:25px; border-radius:10px;">
+            
+            <h2 style="color:#2c3e50;">☀️ Good Morning!</h2>
+            <p style="color:#7f8c8d;">
+                {datetime.now().strftime('%A, %B %d, %Y')}
+            </p>
+
+            <hr>
+
+            <h3 style="color:#34495e;">🌿 Inspirational Quote</h3>
+            <p style="font-style:italic;">{sections["QUOTE"]}</p>
+
+            <h3 style="color:#34495e;">🌤 Weather</h3>
+            <p>{sections["WEATHER"]}</p>
+
+            <h3 style="color:#34495e;">📅 Calendar</h3>
+            <p>{sections["CALENDAR"]}</p>
+
+            <hr>
+
+            <p style="margin-top:20px;">{sections["CLOSING"]}</p>
+
+        </div>
+    </body>
+    </html>
+    """
+    return html
 
 @mcp.tool()
 def send_email(html_content):
@@ -149,7 +204,8 @@ def gather_all_data():
     calendar_events = get_calendar_events()
 
     # Send the email
-    send_email(ai_content)
+    html_content = format_email_html(ai_content)
+    send_email(html_content)
 
 if __name__ == "__main__":
     if os.getenv("RUN_DAILY") == "true":
