@@ -152,5 +152,5 @@ def gather_all_data():
     send_email(ai_content)
 
 if __name__ == "__main__":
-    # Run the server with the desired transport
-    mcp.run(transport="stdio")
+    print("Running daily briefing...", file=sys.stderr)
+    gather_all_data()
