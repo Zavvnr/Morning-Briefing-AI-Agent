@@ -152,5 +152,8 @@ def gather_all_data():
     send_email(ai_content)
 
 if __name__ == "__main__":
-    print("Running daily briefing...", file=sys.stderr)
-    gather_all_data()
+    if os.getenv("RUN_DAILY") == "true":
+        print("Running daily briefing...", file=sys.stderr)
+        gather_all_data()
+    else:
+        mcp.run(transport="stdio")

@@ -33,18 +33,12 @@ jobs:
       - name: Create Google token file
         run: echo '${{ secrets.GOOGLE_TOKEN_JSON }}' > token.json
 
-      - name: Run MCP server directly
+      - name: Run daily briefing
         env:
+          RUN_DAILY: "true"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
         run: python -u mcp_server.py
-
-      - name: Run agent
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: python -u agent.py
