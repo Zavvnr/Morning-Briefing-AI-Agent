@@ -27,12 +27,24 @@ jobs:
           pip install --no-cache-dir --upgrade google-generativeai requests python-dotenv pytz
           pip install -r requirements.txt
 
-      - name: Create service account file
-        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service_account.json
-
       - name: Run MCP server directly
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python -u mcp_server.py
+
+      - name: Create Google credentials file
+        run: echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+
+      - name: Create Google token file
+        run: echo '${{ secrets.GOOGLE_TOKEN_JSON }}' > token.json
+
+      - name: Run agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: python -u agent.py

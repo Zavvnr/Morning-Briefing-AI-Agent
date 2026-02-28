@@ -3,15 +3,12 @@ import smtplib
 import requests
 import sys
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 from openai import OpenAI
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 from mcp.server.fastmcp import FastMCP
 
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 # Setting up Google Calendar API and Google Gmail API credentials
@@ -37,37 +34,21 @@ mcp = FastMCP(
     instructions=get_system_prompt(),
 )
 
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
 @mcp.tool()
 def get_calendar_events():
-    """
-    Fetches upcoming events from the user's Google Calendar.
-    Use this when the user asks about their schedule or due dates.
-    """
-    # Authenticate
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    service = build('calendar', 'v3', credentials=creds)
+    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    service = build("calendar", "v3", credentials=creds)
 
-    # Call the API
-    events_result = service.events().list(
-        calendarId='primary', 
-        maxResults=10, 
+    events = service.events().list(
+        calendarId="primary",
+        maxResults=5,
         singleEvents=True,
-        orderBy='startTime'
+        orderBy="startTime"
     ).execute()
-    
-    events = events_result.get('items', [])
 
-    # Format the output for the LLM
-    if not events:
-        return "No upcoming events found."
-
-    output = "Upcoming Events:\n"
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
-        output += f"- {start}: {event['summary']}\n"
-    
-    return output
+    return events.get("items", [])
 
 print(f"--- Using OpenAI model: gpt-5-nano ---")
 
@@ -146,30 +127,20 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
 
 @mcp.tool()
 def send_email(html_content):
-    print("DEBUG: Inside send_email function.")
-    
-    if not html_content:
-        print("DEBUG: HTML content is empty. Skipping email.")
-        return # Don't send a blank email
+    sender = os.getenv("EMAIL_ADDRESS")
+    password = os.getenv("EMAIL_PASSWORD")
+    recipient = os.getenv("RECIPIENT_EMAIL")
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = f"Your Morning Briefing - {datetime.now().strftime('%B %d')}"
-    msg['From'] = SCOPES[1] # The email associated with the service account
-    msg['To'] = RECIPIENT_EMAIL
-    msg.attach(MIMEText(html_content, 'html'))
+    msg = MIMEText(html_content, 'html')
+    msg["Subject"] = f"Your Morning Briefing - {datetime.now().strftime('%B %d')}"
+    msg["From"] = sender
+    msg["To"] = recipient
 
-    try:
-        print("DEBUG: Attempting SMTP connection...")
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
-            print("DEBUG: Attempting SMTP login...")
-            smtp_server.login(SCOPES[1], None) # No password needed with service account
-            print("DEBUG: Attempting to send mail...")
-            smtp_server.sendmail(SCOPES[1], RECIPIENT_EMAIL, msg.as_string())
-        print("Email sent successfully!") # This is the original, good print
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(sender, password)
+        server.sendmail(sender, recipient, msg.as_string())
 
-    except Exception as e:
-        # Use stderr to make sure this error appears
-        print(f"CRITICAL: Error sending email: {e}", file=sys.stderr)
+    print("Email sent successfully.")
 
 @mcp.tool()
 def gather_all_data():
