@@ -14,7 +14,7 @@ async def main():
     server_params = {
         "command": sys.executable,
         "args": ["mcp_server.py"],
-        "env": None,
+        "env": os.environ.copy(),
     }
     try:
         async with MCPServerStdio(params=server_params) as mcp_server:

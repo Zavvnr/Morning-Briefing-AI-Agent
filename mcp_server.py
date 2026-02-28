@@ -50,8 +50,6 @@ def get_calendar_events():
 
     return events.get("items", [])
 
-print(f"--- Using OpenAI model: gpt-5-nano ---")
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -71,19 +69,16 @@ model = OpenAI(
 
 @mcp.tool()
 def get_quote() -> str:
-    print("DEBUG: Fetching quote...")
     try:
         response = requests.get("https://zenquotes.io/api/random")
         response.raise_for_status()
         data = response.json()[0]
         return f'"{data["q"]}" - {data["a"]}'
     except requests.exceptions.RequestException as e:
-        print(f"DEBUG: Error fetching quote: {e}", file=sys.stderr)
         return "Could not fetch a quote today, but make it a great day!"
 
 @mcp.tool()
 def get_weather(city):
-    print("DEBUG: Fetching weather...")
     try:
         url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={city}&days=1&aqi=no&alerts=no"
         response = requests.get(url)
@@ -94,12 +89,10 @@ def get_weather(city):
         temp_f = forecast['avgtemp_f']
         return f"Today in {city}, expect {condition} with an average temperature of {temp_f}°F."
     except requests.exceptions.RequestException as e:
-        print(f"DEBUG: Error fetching weather: {e}", file=sys.stderr)
         return "Could not fetch the weather."
 
 @mcp.tool()
 def generate_ai_briefing(quote, weather, calendar_items=[]):
-    print("DEBUG: Inside generate_ai_briefing function.")
     prompt = f"""
     Here is today's information for my briefing:
     - Today's date is {datetime.now().strftime('%A, %B %d, %Y')}.
@@ -109,20 +102,12 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
     """
     
     try:
-        print("DEBUG: Calling AI model (gpt-5-nano)...")
         response = model.generate_content(prompt)
-        
-        if not response.text:
-            print("DEBUG: AI returned an EMPTY response.")
-        else:
-            # Slice to avoid spamming the log
-            print(f"DEBUG: AI returned a response. Start: {response.text[:70]}...")
             
         return response.text
         
     except Exception as e:
         # Use stderr to make sure this error appears
-        print(f"CRITICAL: Error during AI generation: {e}", file=sys.stderr)
         return f"<h3>Error during AI generation</h3><p>{e}</p>" # Return an error message to email
 
 @mcp.tool()
@@ -140,31 +125,22 @@ def send_email(html_content):
         server.login(sender, password)
         server.sendmail(sender, recipient, msg.as_string())
 
-    print("Email sent successfully.")
-
 @mcp.tool()
 def gather_all_data():
     # Get quote and weather in parallel to save time
     daily_quote = get_quote()
     # Slice to keep log clean
-    print(f"DEBUG: Quote retrieved: {daily_quote[:30]}...") 
     
     weather_forecast = get_weather(LOCATION)
-    print(f"DEBUG: Weather retrieved: {weather_forecast}")
 
     # Think with AI
-    print("DEBUG: Calling generate_ai_briefing...")
     ai_content = generate_ai_briefing(daily_quote, weather_forecast)
 
     # Google Calendar events
     calendar_events = get_calendar_events()
-    print(f"DEBUG: Calendar events retrieved: {calendar_events[:50]}...")
 
     # Send the email
-    print("DEBUG: Calling send_email...")
     send_email(ai_content)
-    
-    print("Agent has finished its task.")
 
 if __name__ == "__main__":
     # Run the server with the desired transport
