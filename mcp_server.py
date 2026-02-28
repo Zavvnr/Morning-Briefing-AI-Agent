@@ -1,5 +1,7 @@
 import os
 import smtplib
+from click import prompt
+from fastmcp import client
 import requests
 import sys
 from email.mime.text import MIMEText
@@ -102,9 +104,16 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
     """
     
     try:
-        response = model.generate_content(prompt)
-            
-        return response.text
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        response = client.responses.create(
+            model="gpt-4.1",
+            input=prompt
+        )
+        
+        text = response.output_text
+        
+        return text
         
     except Exception as e:
         # Use stderr to make sure this error appears
