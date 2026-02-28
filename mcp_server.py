@@ -103,16 +103,21 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         response = client.responses.create(
             model="gpt-4.1",
             input=prompt
         )
-            
-        return response.output_text
-        
+
+        text = response.output_text
+
+        if not text:
+            text = "AI generated no content."
+
+        return text
+
     except Exception as e:
-        # Use stderr to make sure this error appears
-        return f"<h3>Error during AI generation</h3><p>{e}</p>" # Return an error message to email
+        return f"<h3>Error during AI generation</h3><p>{e}</p>"
 
 @mcp.tool()
 def send_email(html_content):
