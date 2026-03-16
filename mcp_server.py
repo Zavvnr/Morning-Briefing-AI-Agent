@@ -170,11 +170,26 @@ def format_email_html(ai_text):
 
     current_key = None
     for line in ai_text.splitlines():
-        line = line.strip()
-        if line.replace(":", "") in sections:
-            current_key = line.replace(":", "")
-        elif current_key:
-            sections[current_key] += line + " "
+        # Clean the line by removing AI markdown like ** or ##
+        clean_line = line.replace("*", "").replace("#", "").strip()
+        upper_line = clean_line.upper()
+        
+        # Check if the line starts with our keywords, regardless of markdown
+        if upper_line.startswith("QUOTE:"):
+            current_key = "QUOTE"
+            sections[current_key] += clean_line[6:].strip() + " "
+        elif upper_line.startswith("WEATHER:"):
+            current_key = "WEATHER"
+            sections[current_key] += clean_line[8:].strip() + " "
+        elif upper_line.startswith("CALENDAR:"):
+            current_key = "CALENDAR"
+            sections[current_key] += clean_line[9:].strip() + " "
+        elif upper_line.startswith("CLOSING:"):
+            current_key = "CLOSING"
+            sections[current_key] += clean_line[8:].strip() + " "
+        elif current_key and clean_line:
+            # If we are under a header, keep adding the text
+            sections[current_key] += clean_line + "<br><br>"
 
     html = f"""
     <html>
