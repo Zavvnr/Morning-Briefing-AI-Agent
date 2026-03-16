@@ -239,19 +239,28 @@ def send_email(html_content):
 
 @mcp.tool()
 def gather_all_data():
-    # Get quote and weather in parallel to save time
+    # Gather ALL the raw data first
     daily_quote = get_quote()
-    # Slice to keep log clean
-    
     weather_forecast = get_weather(LOCATION)
+    
+    # Fetch calendar events (and pull just the 'summary' or title of each event so the AI can read it)
+    raw_events = get_calendar_events()
+    
+    # Format the events into a simple text list for the AI
+    calendar_items = []
+    for event in raw_events:
+        # Get the event name (defaults to "Busy" if no title)
+        title = event.get('summary', 'Busy')
+        
+        # Try to get the start time
+        start = event['start'].get('dateTime', event['start'].get('date'))
+        
+        calendar_items.append(f"{title} at {start}")
 
-    # Think with AI
-    ai_content = generate_ai_briefing(daily_quote, weather_forecast)
+    # Hand ALL the data to the AI to think and write the briefing
+    ai_content = generate_ai_briefing(daily_quote, weather_forecast, calendar_items)
 
-    # Google Calendar events
-    calendar_events = get_calendar_events()
-
-    # Send the email
+    # Format and send the email
     html_content = format_email_html(ai_content)
     send_email(html_content)
 
