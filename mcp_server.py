@@ -1,5 +1,7 @@
 import os
+import os.path
 import smtplib
+from h11 import Request
 import requests
 import sys
 from email.mime.text import MIMEText
@@ -8,8 +10,15 @@ from datetime import datetime
 from openai import OpenAI
 from mcp.server.fastmcp import FastMCP
 
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
+# Tells where our tells the script exactly where it lives on our computer
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TOKEN_PATH = os.path.join(BASE_DIR, 'token.json')
+CREDS_PATH = os.path.join(BASE_DIR, 'credentials.json')
 
 # Setting up Google Calendar API and Google Gmail API credentials
 SERVICE_ACCOUNT_FILE = 'credentials.json'
@@ -38,14 +47,36 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 @mcp.tool()
 def get_calendar_events():
-    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    service = build("calendar", "v3", credentials=creds)
+    creds = None
+    # Check if the token already exists using the exact path
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        
+    # If there are no valid credentials, trigger the browser login
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(GoogleRequest())
+        else:
+            # Use the exact path to the credentials file
+            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
+            
+        # Save the new token using the exact path
+        with open(TOKEN_PATH, 'w') as token:
+            token.write(creds.to_json())
+            
+    service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
 
+    # Get the current time in the exact format Google requires
+    now = datetime.utcnow().isoformat() + 'Z'
+    
+    # Fetch the events, using timeMin to only get events from right now onward
     events = service.events().list(
-        calendarId="primary",
-        maxResults=5,
+        calendarId='primary', 
+        timeMin=now,
+        maxResults=10, 
         singleEvents=True,
-        orderBy="startTime"
+        orderBy='startTime'
     ).execute()
 
     return events.get("items", [])
@@ -112,12 +143,14 @@ def generate_ai_briefing(quote, weather, calendar_items=[]):
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-        response = client.responses.create(
-            model="gpt-4.1",
-            input=prompt
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
 
-        text = response.output_text
+        text = response.choices[0].message.content
 
         if not text:
             text = "AI generated no content."
@@ -209,7 +242,7 @@ def gather_all_data():
 
 if __name__ == "__main__":
     if os.getenv("RUN_DAILY") == "true":
-        print("Running daily briefing...", file=sys.stderr)
+        # print("Running daily briefing...", file=sys.stderr)
         gather_all_data()
     else:
         mcp.run(transport="stdio")
